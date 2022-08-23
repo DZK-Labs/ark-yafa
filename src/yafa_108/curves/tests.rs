@@ -8,7 +8,7 @@ use ark_ff::{Field, One, PrimeField};
 use ark_std::{rand::Rng, test_rng};
 use core::ops::MulAssign;
 
-use crate::*;
+use crate::yafa_108::*;
 
 generate_g1_test!(yafa; curve_tests; sw_tests;);
 generate_g2_test!(yafa; curve_tests; sw_tests;);

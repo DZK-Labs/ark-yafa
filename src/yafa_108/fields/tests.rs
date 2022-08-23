@@ -6,7 +6,7 @@ use ark_serialize::{buffer_bit_byte_size, CanonicalSerialize};
 use ark_std::{rand::Rng, test_rng};
 use core::ops::{AddAssign, MulAssign, SubAssign};
 
-use crate::*;
+use crate::yafa_108::*;
 
 generate_field_test!(yafa; fq3; fq6_2_on_3; false; mont(9, 4); );
 generate_field_serialization_test!(yafa;);
