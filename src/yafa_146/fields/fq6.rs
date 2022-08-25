@@ -1,7 +1,7 @@
 use crate::yafa_146::{Fq, Fq2, Fq2Config};
 use ark_ff::{
     fields::fp6_3over2::{Fp6, Fp6Config},
-    Field, Fp2, Fp2Config, MontFp,
+    Field, Fp2, MontFp,
 };
 
 pub type Fq6 = Fp6<Fq6Config>;
@@ -12,9 +12,9 @@ pub struct Fq6Config;
 impl Fp6Config for Fq6Config {
     type Fp2Config = Fq2Config;
 
-    /// NONRESIDUE = (0, 1, 0)
+    /// NONRESIDUE = (0, 7)
     #[rustfmt::skip]
-    const NONRESIDUE: Fq2 = Fq2::new(Fq::ZERO, Fq::ONE);
+    const NONRESIDUE: Fq2 = Fq2::new(Fq::ZERO, MontFp!("7"));
 
     #[rustfmt::skip]
     const FROBENIUS_COEFF_FP6_C1: &'static [Fp2<Self::Fp2Config>] = &[
@@ -69,12 +69,4 @@ impl Fp6Config for Fq6Config {
             Fq::ZERO,
         ),
     ];
-
-    #[inline(always)]
-    fn mul_fp2_by_nonresidue(fe: &Fq2) -> Fq2 {
-        // Karatsuba multiplication with constant other = u.
-        let c0 = Fq2Config::mul_fp_by_nonresidue(&fe.c1);
-        let c1 = fe.c0.clone();
-        Fq2::new(c0, c1)
-    }
 }

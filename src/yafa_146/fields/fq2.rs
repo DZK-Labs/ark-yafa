@@ -9,8 +9,8 @@ pub struct Fq2Config;
 impl Fp2Config for Fq2Config {
     type Fp = Fq;
 
-    /// NONRESIDUE = 59
-    const NONRESIDUE: Fq = MontFp!("59");
+    /// NONRESIDUE = 17
+    const NONRESIDUE: Fq = MontFp!("17");
 
     /// Coefficients for the Frobenius automorphism.
     const FROBENIUS_COEFF_FP2_C1: &'static [Fq] = &[

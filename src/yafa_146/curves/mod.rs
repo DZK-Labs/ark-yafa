@@ -14,6 +14,13 @@ pub use self::g1::{G1Affine, G1Projective};
 pub mod g2;
 pub use self::g2::{G2Affine, G2Prepared, G2Projective};
 
+#[cfg(feature = "parallel")]
+use ark_std::cfg_iter;
+#[cfg(feature = "parallel")]
+use core::slice::Iter;
+#[cfg(feature = "parallel")]
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+
 #[cfg(test)]
 mod tests;
 
@@ -59,7 +66,7 @@ impl PairingEngine for Yafa {
             }
         }
         let mut f = Self::Fqk::one();
-        for i in BitIteratorBE::new(ATE_LOOP_COUNT).skip(1) {
+        for i in BitIteratorBE::without_leading_zeros(ATE_LOOP_COUNT).skip(1) {
             f.square_in_place();
             for (p, ref mut coeffs) in &mut pairs {
                 Self::ell(&mut f, coeffs.next().unwrap(), &p);
@@ -93,12 +100,12 @@ impl PairingEngine for Yafa {
         let a = |p: &&Self::G1Prepared, coeffs: &Iter<'_, (Fq2, Fq2, Fq2)>, mut f: Fq12| -> Fq12 {
             let coeffs = coeffs.as_slice();
             let mut j = 0;
-            for i in BitIteratorBE::new(ATE_LOOP_COUNT).skip(1) {
+            for i in BitIteratorBE::without_leading_zeros(ATE_LOOP_COUNT).skip(1) {
                 f.square_in_place();
-                Self::ell(&mut f, &coeffs[j], &p.0);
+                Self::ell(&mut f, &coeffs[j], &p);
                 j += 1;
                 if i {
-                    Self::ell(&mut f, &coeffs[j], &p.0);
+                    Self::ell(&mut f, &coeffs[j], &p);
                     j += 1;
                 }
             }
@@ -160,13 +167,13 @@ impl PairingEngine for Yafa {
 pub const TWIST: Fq2 = Fq2::new(Fq::ZERO, Fq::ONE);
 
 /// ATE_LOOP_COUNT =
-/// 372992476029187189170462968044878524314803726725266721356058824603476064987295668589898
-pub const ATE_LOOP_COUNT: [u64; 5] = [
-    0xd7078b6e4a0d554a,
-    0x1ac144b2352d68c5,
-    0x6dddd2fbe57b1e90,
-    0xc52447071e2e6555,
-    0xc00001a4,
+/// 57896044618658097711785492504343953926634992332820282019728792003956564819949
+/// TODO: use NAF for this one.
+pub const ATE_LOOP_COUNT: [u64; 4] = [
+    0xffffffffffffffed,
+    0xffffffffffffffff,
+    0xffffffffffffffff,
+    0x7fffffffffffffff
 ];
 
 /// FINAL_EXPONENT_LAST_CHUNK_W0 =
