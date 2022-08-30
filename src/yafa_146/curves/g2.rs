@@ -4,9 +4,10 @@ use ark_ec::{
     AffineCurve,
 };
 use ark_ff::{BitIteratorBE, Field, MontFp};
+use ark_serialize::*;
 use ark_std::{vec, vec::Vec, One, Zero};
 
-use crate::yafa_146::{Fq, Fq2, Fr, ATE_LOOP_COUNT};
+use crate::yafa_146::{Fq, Fq2, Fr, TATE_LOOP_COUNT};
 
 pub type G2Affine = Affine<Parameters>;
 pub type G2Projective = Projective<Parameters>;
@@ -14,7 +15,7 @@ pub type G2Projective = Projective<Parameters>;
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Parameters;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct G2Prepared {
     // Stores the coefficients of the line evaluations as calculated in
     // https://eprint.iacr.org/2013/722.pdf
@@ -53,7 +54,7 @@ impl From<G2Affine> for G2Prepared {
                     z: Fq2::one(),
                 };
 
-                for i in BitIteratorBE::without_leading_zeros(ATE_LOOP_COUNT).skip(1) {
+                for i in BitIteratorBE::without_leading_zeros(TATE_LOOP_COUNT).skip(1) {
                     ell_coeffs.push(doubling_step(&mut r, &two_inv));
 
                     if i {

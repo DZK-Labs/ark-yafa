@@ -8,5 +8,6 @@
 )]
 #![forbid(unsafe_code)]
 
+pub mod ed25519;
 pub mod yafa_108;
 pub mod yafa_146;

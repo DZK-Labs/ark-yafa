@@ -4,35 +4,41 @@ version = "0.4.0"
 authors = [ "arkworks contributors" ]
 description = "The Yafa pairing-friendly elliptic curve that embeds curve25519"
 homepage = "https://arkworks.rs"
-repository = "https://github.com/arkworks-rs/curves"
-documentation = "https://docs.rs/ark-mnt4-298/"
 keywords = ["cryptography", "finite-fields" ]
 categories = ["cryptography"]
 include = ["Cargo.toml", "src", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 license = "MIT/Apache-2.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
-ark-r1cs-std = { version = "^0.3.0", default-features = false, optional = true }
+ark-r1cs-std = { version = "^0.3.0", default-features = false }
+ark-gemini = { version = "0.0.1", default-features = false }
 rayon = { version = "1", optional = true }
+ark-bls12-381 = { version = "^0.3.0", default-features = false }
+ark-bn254 = { version = "^0.3.0", features = ["curve"], default-features = false }
+ark-groth16 = { version = "^0.3.0", default-features = false }
+ark-serialize = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies]
 ark-relations = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false }
 ark-algebra-test-templates = { version = "^0.3.0", default-features = false }
 
+[[bench]]
+harness = false
+name = "curve25519_scalar_mul"
+
 [features]
 default = [ "curve" ]
-std = [ "ark-std/std", "ark-ff/std", "ark-ec/std"]
-parallel = [ "ark-ff/parallel", "ark-ec/parallel", "ark-std/parallel", "rayon" ]
+std = [ "ark-std/std", "ark-ff/std", "ark-ec/std", "ark-gemini/std"]
+parallel = [ "ark-ff/parallel", "ark-ec/parallel", "ark-std/parallel", "ark-gemini/parallel", "rayon" ]
 
 curve = [ "scalar_field", "base_field" ]
 scalar_field = []
 base_field = []
-r1cs = [ "base_field", "ark-r1cs-std" ]
 
 [profile.release]
 opt-level = 3
@@ -64,9 +70,19 @@ debug-assertions = true
 debug = true
 
 [patch.crates-io]
-ark-ec = { git = "https://github.com/arkworks-rs/algebra" }
-ark-ff = { git = "https://github.com/arkworks-rs/algebra" }
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra" }
-ark-algebra-test-templates = { git = "https://github.com/arkworks-rs/algebra" }
+ark-test-curves = { git = "https://github.com/arkworks-rs/algebra", branch = "bls12-381-test-field-only" }
 ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std" }
 ark-std = { git = "https://github.com/arkworks-rs/std" }
+ark-gemini = { git = "https://github.com/weikengchen/gemini", branch = "sync_0.4.0" }
+ark-bls12-381 = { git = "https://github.com/arkworks-rs/curves"}
+ark-bn254 = { git = "https://github.com/arkworks-rs/curves"}
+ark-groth16 = { git = "https://github.com/arkworks-rs/groth16", branch = "sync-algebra" }
+ark-relations = {git = "https://github.com/arkworks-rs/snark", branch = "sync-algebra" }
+ark-snark = { git = "https://github.com/arkworks-rs/snark", branch = "sync-algebra" }
+ark-ff = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }
+ark-ec = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }
+ark-poly = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }
+ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives", branch = "non-r1cs-part-fix" }
+ark-sponge = { git = "https://github.com/arkworks-rs/sponge" }
+ark-algebra-test-templates = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }
+ark-serialize = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }

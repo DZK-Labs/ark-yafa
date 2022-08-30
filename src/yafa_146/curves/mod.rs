@@ -66,7 +66,7 @@ impl PairingEngine for Yafa {
             }
         }
         let mut f = Self::Fqk::one();
-        for i in BitIteratorBE::without_leading_zeros(ATE_LOOP_COUNT).skip(1) {
+        for i in BitIteratorBE::without_leading_zeros(TATE_LOOP_COUNT).skip(1) {
             f.square_in_place();
             for (p, ref mut coeffs) in &mut pairs {
                 Self::ell(&mut f, coeffs.next().unwrap(), &p);
@@ -100,7 +100,7 @@ impl PairingEngine for Yafa {
         let a = |p: &&Self::G1Prepared, coeffs: &Iter<'_, (Fq2, Fq2, Fq2)>, mut f: Fq12| -> Fq12 {
             let coeffs = coeffs.as_slice();
             let mut j = 0;
-            for i in BitIteratorBE::without_leading_zeros(ATE_LOOP_COUNT).skip(1) {
+            for i in BitIteratorBE::without_leading_zeros(TATE_LOOP_COUNT).skip(1) {
                 f.square_in_place();
                 Self::ell(&mut f, &coeffs[j], &p);
                 j += 1;
@@ -169,11 +169,11 @@ pub const TWIST: Fq2 = Fq2::new(Fq::ZERO, Fq::ONE);
 /// ATE_LOOP_COUNT =
 /// 57896044618658097711785492504343953926634992332820282019728792003956564819949
 /// TODO: use NAF for this one.
-pub const ATE_LOOP_COUNT: [u64; 4] = [
+pub const TATE_LOOP_COUNT: [u64; 4] = [
     0xffffffffffffffed,
     0xffffffffffffffff,
     0xffffffffffffffff,
-    0x7fffffffffffffff
+    0x7fffffffffffffff,
 ];
 
 /// FINAL_EXPONENT_LAST_CHUNK_W0 =
