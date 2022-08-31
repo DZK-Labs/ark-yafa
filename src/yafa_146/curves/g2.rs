@@ -3,9 +3,10 @@ use ark_ec::{
     short_weierstrass::{Affine, Projective, SWCurveConfig},
     AffineCurve,
 };
-use ark_ff::{BitIteratorBE, Field, MontFp};
+use ark_ff::{Field, MontFp};
 use ark_serialize::*;
 use ark_std::{vec, vec::Vec, One, Zero};
+use core::ops::Neg;
 
 use crate::yafa_146::{Fq, Fq2, Fr, TATE_LOOP_COUNT};
 
@@ -54,12 +55,17 @@ impl From<G2Affine> for G2Prepared {
                     z: Fq2::one(),
                 };
 
-                for i in BitIteratorBE::without_leading_zeros(TATE_LOOP_COUNT).skip(1) {
+                let neg_q = q.neg();
+                for i in TATE_LOOP_COUNT.iter().skip(1) {
                     ell_coeffs.push(doubling_step(&mut r, &two_inv));
 
-                    if i {
-                        ell_coeffs.push(addition_step(&mut r, &q));
-                    }
+                    let coeff = match i {
+                        1 => addition_step(&mut r, &q),
+                        -1 => addition_step(&mut r, &neg_q),
+                        0 => continue,
+                        _ => unreachable!(),
+                    };
+                    ell_coeffs.push(coeff);
                 }
 
                 Self {

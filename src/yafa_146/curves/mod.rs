@@ -1,9 +1,5 @@
 use ark_ec::{AffineCurve, PairingEngine};
-use ark_ff::{
-    biginteger::BigInt,
-    fields::{BitIteratorBE, Field},
-    CyclotomicMultSubgroup, One,
-};
+use ark_ff::{biginteger::BigInt, fields::Field, CyclotomicMultSubgroup, One};
 use ark_std::{vec, Zero};
 
 use crate::yafa_146::{Fq, Fq12, Fq2, Fr};
@@ -65,16 +61,21 @@ impl PairingEngine for Yafa {
                 pairs.push((p, q.ell_coeffs.iter()));
             }
         }
+
         let mut f = Self::Fqk::one();
-        for i in BitIteratorBE::without_leading_zeros(TATE_LOOP_COUNT).skip(1) {
+        for i in TATE_LOOP_COUNT.iter().skip(1) {
             f.square_in_place();
             for (p, ref mut coeffs) in &mut pairs {
                 Self::ell(&mut f, coeffs.next().unwrap(), &p);
             }
-            if i {
-                for &mut (p, ref mut coeffs) in &mut pairs {
-                    Self::ell(&mut f, coeffs.next().unwrap(), &p);
+            match i {
+                1 | -1 => {
+                    for &mut (p, ref mut coeffs) in &mut pairs {
+                        Self::ell(&mut f, coeffs.next().unwrap(), &p);
+                    }
                 }
+                0 => continue,
+                _ => unreachable!(),
             }
         }
         f
@@ -85,6 +86,7 @@ impl PairingEngine for Yafa {
     where
         I: IntoIterator<Item = &'a (Self::G1Prepared, Self::G2Prepared)>,
     {
+        println!("patest");
         let mut pairs = vec![];
         for (p, q) in i {
             if !p.is_zero() && !q.is_zero() {
@@ -100,13 +102,17 @@ impl PairingEngine for Yafa {
         let a = |p: &&Self::G1Prepared, coeffs: &Iter<'_, (Fq2, Fq2, Fq2)>, mut f: Fq12| -> Fq12 {
             let coeffs = coeffs.as_slice();
             let mut j = 0;
-            for i in BitIteratorBE::without_leading_zeros(TATE_LOOP_COUNT).skip(1) {
+            for i in TATE_LOOP_COUNT.iter().skip(1) {
                 f.square_in_place();
                 Self::ell(&mut f, &coeffs[j], &p);
                 j += 1;
-                if i {
-                    Self::ell(&mut f, &coeffs[j], &p);
-                    j += 1;
+                match i {
+                    1 | -1 => {
+                        Self::ell(&mut f, &coeffs[j], &p);
+                        j += 1;
+                    }
+                    0 => continue,
+                    _ => unreachable!(),
                 }
             }
             f
@@ -166,14 +172,18 @@ impl PairingEngine for Yafa {
 /// TWIST = (0, 1, 0)
 pub const TWIST: Fq2 = Fq2::new(Fq::ZERO, Fq::ONE);
 
-/// ATE_LOOP_COUNT =
+/// TATE_LOOP_COUNT =
 /// 57896044618658097711785492504343953926634992332820282019728792003956564819949
-/// TODO: use NAF for this one.
-pub const TATE_LOOP_COUNT: [u64; 4] = [
-    0xffffffffffffffed,
-    0xffffffffffffffff,
-    0xffffffffffffffff,
-    0x7fffffffffffffff,
+pub const TATE_LOOP_COUNT: &'static [i8] = &[
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1, 0,
+    1,
 ];
 
 /// FINAL_EXPONENT_LAST_CHUNK_W0 =
