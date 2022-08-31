@@ -86,7 +86,6 @@ impl PairingEngine for Yafa {
     where
         I: IntoIterator<Item = &'a (Self::G1Prepared, Self::G2Prepared)>,
     {
-        println!("patest");
         let mut pairs = vec![];
         for (p, q) in i {
             if !p.is_zero() && !q.is_zero() {
