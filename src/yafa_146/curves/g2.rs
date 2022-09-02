@@ -5,8 +5,7 @@ use ark_ec::{
 };
 use ark_ff::{Field, MontFp};
 use ark_serialize::*;
-use ark_std::{vec, vec::Vec, One, Zero};
-use core::ops::Neg;
+use ark_std::{ops::Neg, vec, vec::Vec, One, Zero};
 
 use crate::yafa_146::{Fq, Fq2, Fr, TATE_LOOP_COUNT};
 
