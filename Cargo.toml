@@ -21,6 +21,7 @@ ark-bls12-381 = { version = "^0.3.0", default-features = false }
 ark-bn254 = { version = "^0.3.0", features = ["curve"], default-features = false }
 ark-groth16 = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false }
+itertools = { version = "0.10", default-features = false }
 
 [dev-dependencies]
 ark-relations = { version = "^0.3.0", default-features = false }
@@ -70,7 +71,7 @@ debug-assertions = true
 debug = true
 
 [patch.crates-io]
-ark-test-curves = { git = "https://github.com/arkworks-rs/algebra", branch = "bls12-381-test-field-only" }
+ark-test-curves = { git = "https://github.com/arkworks-rs/algebra" }
 ark-r1cs-std = { git = "https://github.com/arkworks-rs/r1cs-std" }
 ark-std = { git = "https://github.com/arkworks-rs/std" }
 ark-gemini = { git = "https://github.com/weikengchen/gemini", branch = "sync_0.4.0" }
@@ -82,7 +83,7 @@ ark-snark = { git = "https://github.com/arkworks-rs/snark", branch = "sync-algeb
 ark-ff = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }
 ark-ec = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }
 ark-poly = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }
-ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives", branch = "non-r1cs-part-fix" }
-ark-sponge = { git = "https://github.com/arkworks-rs/sponge" }
+ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives" }
+ark-sponge = { git = "https://github.com/arkworks-rs/sponge", branch = "update-serialize" }
 ark-algebra-test-templates = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }
 ark-serialize = { git = "https://github.com/arkworks-rs/algebra", branch = "g2prepared-serialization" }

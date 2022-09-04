@@ -1,11 +1,11 @@
 use ark_ec::{
     models::CurveConfig,
     short_weierstrass::{Affine, Projective, SWCurveConfig},
-    AffineCurve,
+    AffineRepr, CurveGroup,
 };
 use ark_ff::{Field, MontFp};
 use ark_serialize::*;
-use ark_std::{ops::Neg, vec, vec::Vec, One, Zero};
+use ark_std::{ops::Neg, vec, vec::Vec, One};
 
 use crate::yafa_146::{Fq, Fq2, Fr, TATE_LOOP_COUNT};
 
@@ -34,14 +34,14 @@ struct G2HomProjective {
 
 impl Default for G2Prepared {
     fn default() -> Self {
-        Self::from(G2Affine::prime_subgroup_generator())
+        Self::from(G2Affine::generator())
     }
 }
 
 impl From<G2Affine> for G2Prepared {
     fn from(q: G2Affine) -> Self {
         let two_inv = Fq::one().double().inverse().unwrap();
-        match q.is_zero() {
+        match q.is_identity() {
             true => G2Prepared {
                 ell_coeffs: vec![],
                 infinity: true,
@@ -73,6 +73,24 @@ impl From<G2Affine> for G2Prepared {
                 }
             }
         }
+    }
+}
+
+impl From<G2Projective> for G2Prepared {
+    fn from(q: G2Projective) -> Self {
+        q.into_affine().into()
+    }
+}
+
+impl<'a> From<&'a G2Affine> for G2Prepared {
+    fn from(other: &'a G2Affine) -> Self {
+        G2Prepared::from(*other)
+    }
+}
+
+impl<'a> From<&'a G2Projective> for G2Prepared {
+    fn from(q: &'a G2Projective) -> Self {
+        q.into_affine().into()
     }
 }
 
