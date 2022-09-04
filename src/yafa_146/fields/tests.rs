@@ -1,12 +1,8 @@
-use ark_algebra_test_templates::{
-    fields::*, generate_field_serialization_test, generate_field_test,
-};
-use ark_ff::{Field, One, PrimeField, UniformRand, Zero};
-use ark_serialize::{buffer_bit_byte_size, CanonicalSerialize};
-use ark_std::{rand::Rng, test_rng};
-use core::ops::{AddAssign, MulAssign, SubAssign};
-
 use crate::yafa_146::*;
+use ark_algebra_test_templates::*;
 
-generate_field_test!(yafa_146; fq2; fq6; fq12; mont(9, 4); );
-generate_field_serialization_test!(yafa_146; fq2; fq6; fq12;);
+test_field!(fr; Fr; mont_prime_field);
+test_field!(fq; Fq; mont_prime_field);
+test_field!(fq2; Fq2);
+test_field!(fq6; Fq6);
+test_field!(fq12; Fq12);

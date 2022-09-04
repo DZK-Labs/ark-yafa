@@ -1,25 +1,19 @@
-use ark_ec::{AffineCurve, PairingEngine};
-use ark_ff::{
-    biginteger::BigInt,
-    fields::{BitIteratorBE, Field},
-    CyclotomicMultSubgroup, One,
-};
-use ark_std::{vec, Zero};
+use ark_ec::{pairing::Pairing, AffineRepr};
+use ark_ff::{biginteger::BigInt, fields::Field, CyclotomicMultSubgroup, One};
+use ark_std::{cfg_chunks_mut, vec::Vec};
+use itertools::Itertools;
 
 use crate::yafa_146::{Fq, Fq12, Fq2, Fr};
 
 pub mod g1;
-pub use self::g1::{G1Affine, G1Projective};
+pub use self::g1::{G1Affine, G1Prepared, G1Projective};
 
 pub mod g2;
 pub use self::g2::{G2Affine, G2Prepared, G2Projective};
 
+use ark_ec::pairing::{MillerLoopOutput, PairingOutput};
 #[cfg(feature = "parallel")]
-use ark_std::cfg_iter;
-#[cfg(feature = "parallel")]
-use core::slice::Iter;
-#[cfg(feature = "parallel")]
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::*;
 
 #[cfg(test)]
 mod tests;
@@ -29,11 +23,11 @@ pub struct Yafa;
 
 impl Yafa {
     // Evaluate the line function at point p.
-    fn ell(f: &mut Fq12, coeffs: &g2::EllCoeff<Fq2>, p: &G1Affine) {
+    fn ell(f: &mut Fq12, coeffs: &g2::EllCoeff<Fq2>, p: &G1Prepared) {
         let mut c0 = coeffs.0;
         let mut c1 = coeffs.1;
         let c2 = coeffs.2;
-        let (px, py) = p.xy().unwrap();
+        let (px, py) = p.0.xy().unwrap();
 
         // This is a divisive twist
         c0.mul_assign_by_fp(py);
@@ -42,93 +36,62 @@ impl Yafa {
     }
 }
 
-impl PairingEngine for Yafa {
-    type Fr = Fr;
-    type G1Projective = G1Projective;
+impl Pairing for Yafa {
+    type ScalarField = Fr;
+    type G1 = G1Projective;
     type G1Affine = G1Affine;
-    type G1Prepared = G1Affine;
-    type G2Projective = G2Projective;
+    type G1Prepared = G1Prepared;
+    type G2 = G2Projective;
     type G2Affine = G2Affine;
     type G2Prepared = G2Prepared;
-    type Fq = Fq;
-    type Fqe = Fq2;
-    type Fqk = Fq12;
+    type TargetField = Fq12;
 
-    #[cfg(not(feature = "parallel"))]
-    fn miller_loop<'a, I>(i: I) -> Self::Fqk
-    where
-        I: IntoIterator<Item = &'a (Self::G1Prepared, Self::G2Prepared)>,
-    {
-        let mut pairs = vec![];
-        for (p, q) in i {
-            if !p.is_zero() && !q.is_zero() {
-                pairs.push((p, q.ell_coeffs.iter()));
-            }
-        }
-        let mut f = Self::Fqk::one();
-        for i in BitIteratorBE::without_leading_zeros(TATE_LOOP_COUNT).skip(1) {
-            f.square_in_place();
-            for (p, ref mut coeffs) in &mut pairs {
-                Self::ell(&mut f, coeffs.next().unwrap(), &p);
-            }
-            if i {
-                for &mut (p, ref mut coeffs) in &mut pairs {
-                    Self::ell(&mut f, coeffs.next().unwrap(), &p);
+    fn multi_miller_loop(
+        a: impl IntoIterator<Item = impl Into<Self::G1Prepared>>,
+        b: impl IntoIterator<Item = impl Into<Self::G2Prepared>>,
+    ) -> MillerLoopOutput<Self> {
+        let mut pairs = a
+            .into_iter()
+            .zip_eq(b)
+            .filter_map(|(p, q)| {
+                let (p, q) = (p.into(), q.into());
+                match !p.is_zero() && !q.is_zero() {
+                    true => Some((p, q.ell_coeffs.into_iter())),
+                    false => None,
                 }
-            }
-        }
-        f
+            })
+            .collect::<Vec<_>>();
+
+        let f = cfg_chunks_mut!(pairs, 4)
+            .map(|pairs| {
+                let mut f = Self::TargetField::one();
+                for i in TATE_LOOP_COUNT.iter().skip(1) {
+                    f.square_in_place();
+                    for (p, coeffs) in pairs.iter_mut() {
+                        Self::ell(&mut f, &coeffs.next().unwrap(), &p);
+                    }
+                    match i {
+                        1 | -1 => {
+                            for (p, coeffs) in pairs.iter_mut() {
+                                Self::ell(&mut f, &coeffs.next().unwrap(), &p);
+                            }
+                        }
+                        0 => continue,
+                        _ => unreachable!(),
+                    }
+                }
+                f
+            })
+            .product::<Self::TargetField>();
+        MillerLoopOutput(f)
     }
 
-    #[cfg(feature = "parallel")]
-    fn miller_loop<'a, I>(i: I) -> Self::Fqk
-    where
-        I: IntoIterator<Item = &'a (Self::G1Prepared, Self::G2Prepared)>,
-    {
-        let mut pairs = vec![];
-        for (p, q) in i {
-            if !p.is_zero() && !q.is_zero() {
-                pairs.push((p, q.ell_coeffs.iter()));
-            }
-        }
+    fn final_exponentiation(f: MillerLoopOutput<Self>) -> Option<PairingOutput<Self>> {
+        let f = f.0;
 
-        let mut f_vec = vec![];
-        for _ in 0..pairs.len() {
-            f_vec.push(Self::Fqk::one());
-        }
-
-        let a = |p: &&Self::G1Prepared, coeffs: &Iter<'_, (Fq2, Fq2, Fq2)>, mut f: Fq12| -> Fq12 {
-            let coeffs = coeffs.as_slice();
-            let mut j = 0;
-            for i in BitIteratorBE::without_leading_zeros(TATE_LOOP_COUNT).skip(1) {
-                f.square_in_place();
-                Self::ell(&mut f, &coeffs[j], &p);
-                j += 1;
-                if i {
-                    Self::ell(&mut f, &coeffs[j], &p);
-                    j += 1;
-                }
-            }
-            f
-        };
-
-        let mut products = vec![];
-        cfg_iter!(pairs)
-            .zip(f_vec)
-            .map(|(p, f)| a(&p.0, &p.1, f))
-            .collect_into_vec(&mut products);
-
-        let mut f = Self::Fqk::one();
-        for ff in products {
-            f *= ff;
-        }
-        f
-    }
-
-    fn final_exponentiation(f: &Self::Fqk) -> Option<Self::Fqk> {
         // f1 = r.conjugate() = f^(p^6)
-        let mut f1 = *f;
-        f1.conjugate();
+        let mut f1 = f;
+        f1.conjugate_in_place();
 
         f.inverse().map(|mut f2| {
             // Easy part
@@ -158,7 +121,7 @@ impl PairingEngine for Yafa {
             let w1_part = elt_q.cyclotomic_exp(&FINAL_EXPONENT_LAST_CHUNK_W1);
             let w0_part = r.cyclotomic_exp(&FINAL_EXPONENT_LAST_CHUNK_W0);
 
-            w3_part * &w2_part * &w1_part * &w0_part
+            PairingOutput(w3_part * &w2_part * &w1_part * &w0_part)
         })
     }
 }
@@ -166,14 +129,18 @@ impl PairingEngine for Yafa {
 /// TWIST = (0, 1, 0)
 pub const TWIST: Fq2 = Fq2::new(Fq::ZERO, Fq::ONE);
 
-/// ATE_LOOP_COUNT =
+/// TATE_LOOP_COUNT =
 /// 57896044618658097711785492504343953926634992332820282019728792003956564819949
-/// TODO: use NAF for this one.
-pub const TATE_LOOP_COUNT: [u64; 4] = [
-    0xffffffffffffffed,
-    0xffffffffffffffff,
-    0xffffffffffffffff,
-    0x7fffffffffffffff,
+pub const TATE_LOOP_COUNT: &'static [i8] = &[
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1, 0,
+    1,
 ];
 
 /// FINAL_EXPONENT_LAST_CHUNK_W0 =

@@ -22,9 +22,9 @@ impl CurveConfig for EdwardsParameters {
     const COFACTOR: &'static [u64] = &[8];
 
     /// COFACTOR_INV (mod r) =
-    /// 21711016731996786641919559689128982722488122124807605757398297001483711807481
+    /// 2713877091499598330239944961141122840321418634767465352250731601857045344121
     const COFACTOR_INV: Fr =
-        MontFp!("21711016731996786641919559689128982722488122124807605757398297001483711807481");
+        MontFp!("2713877091499598330239944961141122840321418634767465352250731601857045344121");
 }
 
 impl TECurveConfig for EdwardsParameters {
@@ -42,8 +42,8 @@ impl TECurveConfig for EdwardsParameters {
 
     /// Multiplication by `a` is just negation.
     #[inline(always)]
-    fn mul_by_a(elem: &Self::BaseField) -> Self::BaseField {
-        -*elem
+    fn mul_by_a(elem: Self::BaseField) -> Self::BaseField {
+        -elem
     }
 }
 
